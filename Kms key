@@ -1,0 +1,43 @@
+Implementation Steps (for Design Doc)
+
+1. AWS KMS
+	•	Create Customer Managed Keys (CMKs) in KMS for each service (S3, RDS, Redshift, EBS).
+	•	Configure key policies → allow only required IAM roles/apps.
+	•	Enable automatic rotation (12 months).
+	•	Integrate with CloudTrail to log all KMS usage.
+
+⸻
+
+2. SSL/TLS
+	•	Request/provision SSL certificates via AWS ACM.
+	•	Attach ACM certs to ALB, CloudFront, API Gateway.
+	•	Update security policies → enforce TLS 1.2/1.3 only, disable older ciphers.
+	•	Configure HTTPS redirect (all HTTP traffic automatically sent to HTTPS).
+	•	Enable TLS for internal services (database connections, ECS/EKS pods).
+
+⸻
+
+3. Encryption at Rest
+	•	Enable default KMS encryption for:
+	•	S3 buckets (aws s3api put-bucket-encryption …)
+	•	EBS volumes (encrypted=true in Terraform/CloudFormation)
+	•	RDS/Redshift (set StorageEncrypted=true with KMS key)
+	•	Store DB credentials/API keys in Secrets Manager or SSM Parameter Store (encrypted with KMS).
+	•	For sensitive fields (PII/financial), implement application-level encryption in code.
+	•	Configure CloudWatch alarms on failed decrypt attempts.
+
+⸻
+
+4. Validation & Monitoring
+	•	Test SSL endpoints with Qualys SSL Labs or openssl s_client.
+	•	Verify encryption enabled with AWS CLI (aws s3api get-bucket-encryption, aws rds describe-db-instances).
+	•	Check CloudTrail logs for unauthorized KMS access.
+	•	Enable AWS Config rules (e.g., s3-bucket-server-side-encryption-enabled).
+
+⸻
+
+🎯 End Result
+	•	All traffic encrypted in transit (TLS 1.2/1.3).
+	•	All data encrypted at rest with KMS CMKs.
+	•	Centralized secrets management with auto-rotation.
+	•	Auditable and compliant with PCI-DSS, HIPAA, GDPR.
