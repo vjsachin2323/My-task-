@@ -1,0 +1,33 @@
+Security Best Practices (One-Pager)
+
+✅ AWS KMS (Key Management Service)
+	•	Use Customer Managed Keys (CMKs)
+	•	Apply least privilege IAM policies
+	•	Enable automatic rotation (12 months)
+	•	CloudTrail logging for all key actions
+
+⸻
+
+✅ SSL/TLS (Data in Transit)
+	•	Enforce TLS 1.2+ only
+	•	Use AWS ACM for certificates (auto-renewal)
+	•	HTTPS-only endpoints (ALB, CloudFront, APIs)
+	•	Strong ciphers (AES-GCM, ECDHE)
+	•	Encrypt internal service-to-service traffic
+
+⸻
+
+✅ Encryption at Rest
+	•	Enable default KMS encryption for S3, EBS, RDS, Redshift
+	•	Store credentials in Secrets Manager (KMS protected)
+	•	Use application-level encryption for PII/financial data
+	•	Monitor decrypt attempts with CloudWatch & CloudTrail
+
+⸻
+
+🎯 Key Takeaway
+
+Layered approach:
+	•	🔑 KMS for key management
+	•	🔒 SSL/TLS for secure transit
+	•	🗄 Encryption at rest for storage
