@@ -82,9 +82,64 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "sse" {
     apply_server_side_encryption_by_default {
       sse_algorithm     = "aws:kms"
       kms_master_key_id = aws_kms_key.app_key.arn
+
     }
   }
 }
+7. Validation & Monitoring
+	•	S3 Encryption Check
+aws s3api get-bucket-encryption --bucket my-secure-bucket
+
+	•	RDS Encryption Check
+aws rds describe-db-instances --db-instance-identifier mysecuredb
+
+   . TLS Verification
+openssl s_client -connect example.com:443 -tls1_2
+
+	•	Enable AWS Config Rules (e.g., s3-bucket-server-side-encryption-enabled).
+	•	Monitor CloudWatch alarms for failed decrypt attempts.
+
+
+8. Compliance Mapping
+Standard
+Requirement
+How Addressed
+PCI-DSS
+Encrypt cardholder data
+KMS + S3/RDS encryption
+HIPAA
+Encrypt PHI in transit & at rest
+TLS + KMS encryption
+GDPR
+Protect personal data
+Secrets Manager + app-level encryption
+
+
+9. Risks & Mitigations
+
+
+Risk
+Impact
+Mitigation
+Key Mismanagement
+Data exposure
+Strict IAM + key rotation
+Expired Certificates
+Service outage
+ACM auto-renewal
+Misconfigured Buckets
+Data leakage
+S3 encryption + Config rules
+
+
+10. Conclusion
+
+By implementing KMS, SSL/TLS, and encryption best practices, this design ensures that all data stored or transmitted in AWS remains secure, compliant, and resilient against unauthorized access.
+
+
+
+
+
 
 
 
