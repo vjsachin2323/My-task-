@@ -1,0 +1,50 @@
+Design Document: Security Best Practices – KMS, SSL/TLS, and Encryption
+
+⸻
+
+1. Document Control
+	•	Version: 1.0
+	•	Author: [Your Name]
+	•	Reviewed By: [Reviewer/Architect]
+	•	Date: [DD/MM/YYYY]
+
+⸻
+
+2. Purpose
+
+The purpose of this document is to define the security design for implementing encryption across our AWS environment. This design ensures protection of data at rest, in transit, and during key management while meeting compliance requirements (PCI-DSS, HIPAA, GDPR).
+
+⸻
+
+3. Scope
+
+This design covers:
+	•	AWS Key Management Service (KMS) for encryption key lifecycle management.
+	•	SSL/TLS for securing data in transit across all public and private endpoints.
+	•	Encryption at rest for data stored in S3, EBS, RDS, and Redshift.
+	•	Protection of secrets and credentials using AWS Secrets Manager.
+
+⸻
+
+4. Architecture Overview
+
+Diagram
+
+(Insert the diagram we created earlier – showing Client → ALB/CloudFront → Application → Database/Storage, with KMS controlling encryption at rest and TLS in transit.)
+
+⸻
+
+5. Design Principles
+	•	Defense in Depth → Multiple layers of encryption (in transit, at rest, keys).
+	•	Least Privilege → Minimal IAM access to keys and secrets.
+	•	Automation First → Use Terraform/CLI for consistent and auditable deployments.
+	•	Compliance Aligned → Meets industry standards (PCI-DSS, HIPAA, GDPR).
+
+⸻
+
+6. Best Practices & Implementation
+
+6.1 AWS KMS (Key Management)
+	•	Use Customer Managed Keys (CMKs) with automatic rotation (12 months).
+	•	Apply least privilege key policies for apps and roles.
+	•	CloudTrail logging enabled for all KMS API actions.
