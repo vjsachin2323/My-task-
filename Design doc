@@ -48,3 +48,45 @@ Diagram
 	•	Use Customer Managed Keys (CMKs) with automatic rotation (12 months).
 	•	Apply least privilege key policies for apps and roles.
 	•	CloudTrail logging enabled for all KMS API actions.
+
+
+
+Implementation Snippet (Terraform)
+resource "aws_kms_key" "app_key" {
+  description         = "CMK for App Encryption"
+  enable_key_rotation = true
+}
+6.2 SSL/TLS (Data in Transit)
+	•	Enforce TLS 1.2 or 1.3 only, disable SSL/TLS 1.0/1.1.
+	•	Use AWS ACM for provisioning and renewing certificates.
+	•	Redirect all HTTP traffic → HTTPS.
+	•	Encrypt internal service communication with TLS.
+
+Implementation Snippet (Terraform)
+resource "aws_lb_listener" "https" {
+  port            = 443
+  protocol        = "HTTPS"
+  ssl_policy      = "ELBSecurityPolicy-TLS-1-2-2017-01"
+  certificate_arn = aws_acm_certificate.cert.arn
+}
+
+6.3 Encryption at Rest
+	•	Enable KMS encryption by default for S3, EBS, RDS, and Redshift.
+	•	Store credentials in Secrets Manager, encrypted with KMS.
+	•	Apply application-level encryption for highly sensitive PII/financial data.
+
+Implementation Snippet (Terraform – S3)
+resource "aws_s3_bucket_server_side_encryption_configuration" "sse" {
+  bucket = aws_s3_bucket.secure_bucket.bucket
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.app_key.arn
+    }
+  }
+}
+
+
+
+
+
