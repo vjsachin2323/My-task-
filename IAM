@@ -1,0 +1,120 @@
+Design Document: AWS IAM — Users, Groups, Permissions
+
+1. Document Control
+	•	Version: 1.0
+	•	Author: [Your Name]
+	•	Reviewed By: [Reviewer/Architect]
+	•	Date: [DD/MM/YYYY]
+
+⸻
+
+2. Purpose
+
+Define an enterprise IAM design for AWS that enforces least privilege, secure user access, auditable change management, and safe delegation of permissions for services and humans.
+
+⸻
+
+3. Scope
+	•	Human users (developers, ops, auditors)
+	•	Groups (role-based collections)
+	•	Policies (managed & inline) and permission boundaries
+	•	Roles for services and cross-account access
+	•	Access methods: console, programmatic (access keys), federation (SSO/OIDC/SAML)
+
+⸻
+
+4. Design Principles
+	•	Least Privilege — grant only required permissions.
+	•	Roles > Users — prefer IAM Roles (assume-role) for services and temporary elevation.
+	•	Separation of Duties — separate admins from users; restrict who can manage IAM.
+	•	No long-lived credentials — minimize/rotate access keys, prefer SSO/federation.
+	•	MFA everywhere — require MFA for console + sensitive actions.
+	•	Permission Boundaries & SCPs — use boundaries/SCPs to limit scope.
+	•	Centralized Audit & Alerting — CloudTrail, Config, Access Analyzer, CloudWatch.
+	•	Automation & IaC — create/manage IAM via Terraform/CI pipelines.
+
+⸻
+
+5. Architecture Overview
+
+(Insert diagram: Identity Source (IdP/AD/SSO) → AWS SSO/Federation → IAM Roles / IAM Users → Groups / Policies → AWS Resources. Show cross-account roles and service roles.)
+
+Key pieces:
+	•	Identity Provider (IdP) (Okta/Azure AD/Google Workspace) for centralized SSO/federation.
+	•	AWS SSO (IAM Identity Center) or SAML integration for human access.
+	•	IAM Roles for EC2/ECS/Lambda with least privilege attached.
+	•	IAM Users only for service accounts that truly need long-term credentials (avoid if possible).
+	•	Groups to aggregate permissions by job function (e.g., Dev, Infra, Security, Auditors).
+
+⸻
+
+6. Recommended Logical Model
+	1.	Identity Source
+	•	Prefer external IdP + AWS SSO. If not available, use IAM users temporarily.
+	2.	Groups
+	•	Job-function groups: devs, infra-ops, db-admins, sec-audit.
+	•	Groups hold managed policies only (no inline unless necessary).
+	3.	Roles
+	•	service-* roles for compute with attached least-privilege policies.
+	•	cross-account-* roles with restricted trust policies (specific Principals).
+	4.	Policies
+	•	Use customer-managed policies scoped tightly; name with purpose (e.g., policy/ecs-s3-read-only).
+	•	Use aws_iam_policy_document to generate granular JSON in IaC.
+	5.	Permission Boundaries
+	•	Apply to admin/developer accounts to prevent escalation beyond allowed set.
+	6.	Admin Separation
+	•	Minimal set of IAM administrators; require MFA + permission boundary to limit blast radius.
+
+⸻
+
+7. Controls & Monitoring
+	•	CloudTrail: all API activity (immutable retention policy).
+	•	AWS Config: rules for IAM password policy, root usage, unused keys, MFA.
+	•	IAM Access Analyzer: detect resources shared with external principals.
+	•	CloudWatch Alarms: notify on suspicious activity (e.g., CreateAccessKey by unexpected principals).
+	•	Periodic Review: quarterly access review; remove inactive users & keys.
+
+⸻
+
+8. Risks & Mitigations
+Risk
+Impact
+Mitigation
+Compromised keys
+High
+Rotate keys, use short-lived credentials, SSO/federation
+Over-privileged users
+High
+Least privilege policy, regular reviews, permission boundaries
+Misconfigured trust policy
+High
+Strict trust conditions, automated policy linting
+Root account misuse
+Critical
+Store root credentials offline, enable MFA, restrict root usage
+
+
+
+Add to Section 2. Purpose / 3. Scope
+	•	Our AWS account does not directly manage IAM users.
+	•	The identity source is configured as an external IdP (e.g., Azure AD/Okta).
+	•	Any new user creation or attribute updates (e.g., email, group assignment) must be done in the IdP.
+	•	AWS IAM roles & permission sets are mapped to groups from the IdP.
+
+⸻
+
+📌 Add to Section 6. Recommended Logical Model
+	•	Human Access
+	•	Users are provisioned in IdP (external identity provider).
+	•	Groups and attributes (like team, role) flow into AWS via SAML/OIDC.
+	•	No manual IAM user creation in AWS.
+	•	AWS IAM is used only for roles, permission sets, and policies.
+
+⸻
+
+📌 Add to Section Implementation Roadmap
+	•	Step 1: Confirm IdP integration (e.g., Azure AD → AWS SSO).
+	•	Step 2: Create/manage users only in IdP (not in IAM console).
+	•	Step 3: Map IdP groups to AWS permission sets (least privilege).
+	•	Step 4: Regularly sync IdP groups with AWS IAM Identity Center.
+	•	Step 5: Enforce MFA at IdP level (centralized control).
