@@ -1,0 +1,93 @@
+HLD – AWS CloudTrail
+
+1. Purpose
+
+To provide governance, compliance, and audit visibility across AWS accounts by logging all management and data events into a centralized, immutable, and encrypted repository.
+
+2. Audience
+	•	Cloud Security Team
+	•	Compliance & Audit Teams
+	•	DevOps Engineers
+
+3. Introduction
+
+AWS CloudTrail records account activity and API calls across AWS infrastructure. This design ensures:
+	•	Centralized multi-account logging.
+	•	S3 + KMS for encrypted storage.
+	•	Integration with CloudWatch for real-time alerts.
+	•	Validation for PCI 
+DSS, HIPAA, and CIS benchmarks.
+
+4. Architecture and Design
+	•	Centralized Organization Trail
+	•	Delegated Admin Account → creates & manages org trail.
+	•	Logs all management & data events.
+	•	Storage
+	•	Logs delivered to centralized S3 bucket (enforced encryption with KMS).
+	•	Cross-region replication for durability.
+	•	Validation & Integrity
+	•	Enable log file validation for tamper detection.
+	•	Monitoring
+	•	Logs streamed to CloudWatch → EventBridge for alerting.
+	•	Forwarded to Security Hub for correlation.
+
+(Diagram suggestion: Org → Member Accounts → CloudTrail → S3 + KMS → CloudWatch/EventBridge → SOC/SIEM)
+
+5. List of Components & Services
+	•	AWS CloudTrail (Org Trail)
+	•	Amazon S3 (log bucket)
+	•	AWS KMS (bucket encryption)
+	•	Amazon CloudWatch (alerts, dashboards)
+	•	AWS EventBridge (alerts to SOC)
+	•	Security Hub / GuardDuty integration
+
+6. Screenshots
+	•	CloudTrail dashboard showing active trail.
+	•	S3 bucket with logs + encryption enabled.
+	•	CloudWatch alarm for suspicious API calls.
+
+7. Observability (Backup & Restore)
+	•	S3 logs backed with cross-region replication.
+	•	Lifecycle → Glacier for long-term retention (7 years).
+	•	CloudTrail events queryable via Athena for auditing.
+
+8. Common Services
+	•	Integrated with Security Hub (compliance).
+	•	Used by GuardDuty for threat intelligence.
+	•	Linked to Audit Account monitoring.
+
+⸻
+
+🛠 Implementation Steps
+
+A. Create Organization Trail
+	1.	In delegated Audit Account → enable Organization Trail.
+
+aws cloudtrail create-trail \
+  --name OrgTrail \
+  --s3-bucket-name central-audit-logs \
+  --is-multi-region-trail \
+  --is-organization-trail
+
+2.	Apply to all accounts in AWS Organizations.
+
+⸻
+
+B. Secure Storage
+	1.	Create S3 bucket with encryption enforced.
+	2.	Enable KMS key policy (only Audit account access).
+	3.	Block public access.
+
+Terraform example:
+resource "aws_cloudtrail" "org" {
+  name                          = "org-trail"
+  s3_bucket_name                = aws_s3_bucket.cloudtrail.id
+  is_multi_region_trail         = true
+  include_global_service_events = true
+  enable_log_file_validation    = true
+}
+C. Monitoring & Alerts
+	•	Stream CloudTrail to CloudWatch Logs.
+	•	Create alarms for critical API calls (e.g., DeleteTrail, StopLogging, DisableKey).
+	•	EventBridge → SNS/Lambda → SOC or SIEM integration.
+Do you also want me to draft a Draw.io diagram for CloudTrail (Org accounts → Trail → S3+KMS → CloudWatch/EventBridge → SOC)?
