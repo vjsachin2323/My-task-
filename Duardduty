@@ -1,0 +1,255 @@
+Design Document: AWS GuardDuty — Detection & Response
+
+Version: 1.0
+Author: [Your Name]
+Date: [DD/MM/YYYY]
+
+⸻
+
+Purpose
+
+Define the design and implementation plan for AWS GuardDuty across the organization to detect suspicious activity, integrate findings into central monitoring/SIEM, and trigger automated or operator-led response. Ensure the design fits the IAM model (IdP + AWS SSO + roles) and supports multi-account deployments via AWS Organizations.
+
+⸻
+
+Scope
+	•	Enable GuardDuty detectors in all accounts (single-account or multi-account via Organizations).
+	•	Configure data sources: VPC Flow Logs, AWS CloudTrail Management Events, DNS logs, S3 protection (optional).
+	•	Integrate with AWS Security Hub / SIEM / SNS / EventBridge for alerting and automated responses.
+	•	Define RBAC: who can manage GuardDuty, view findings, and respond.
+	•	Automate deployment with Terraform/CloudFormation and include validation checks.
+
+⸻
+
+Design Principles
+	•	Centralized visibility, distributed detection: enable detectors in each account and aggregate findings to a central/security account.
+	•	Least privilege: only delegated admin and SOC roles can manage detectors or modify settings.
+	•	Automated deployment & drift detection: manage via IaC and CI (Terraform).
+	•	Alerting & playbooks: findings must flow to SIEM/Slack/Email and be triaged using runbooks.
+	•	Retention & privacy: configure data retention consistent with policy; be careful with PII in logs.
+
+⸻
+
+Architecture Overview (text to add to diagram)
+	•	Accounts: Member accounts with local GuardDuty detectors.
+	•	Security / Central Account: Delegated Admin account that aggregates findings.
+	•	Data Sources: CloudTrail management events, VPC Flow Logs, DNS logs, S3 data events (optional).
+	•	Integrations: Security Hub (optional), EventBridge → SNS → Lambda → Pager/Slack/SIEM, S3 (export findings).
+	•	Automation: Terraform module to enable detector + configure publishing/archiving + permission roles.
+
+⸻
+
+Controls & Policies
+	•	Only delegated-admin (security account) can enable/disable GuardDuty across orgs.
+	•	Define IAM policies:
+	•	GuardDutyAdmin — manage detectors, threatlists, publishing destinations.
+	•	GuardDutyReadOnly — view findings only.
+	•	GuardDutyResponder — can trigger response actions (invoke Lambda, quarantine resources).
+	•	Enforce MFA and SSO for all users who can alter GuardDuty settings.
+	•	Use AWS Config to check GuardDuty enabled in all accounts.
+
+⸻
+
+Implementation Steps (Concrete)
+
+Pre-requisites
+	1.	AWS Organizations with trusted delegated security account (if multi-account).
+	2.	Terraform/CI pipeline configured for accounts (or central automation account with cross-account assume-role).
+
+Step 1 — Enable GuardDuty (single account)
+	•	Create detector in account.
+	•	Configure data sources (CloudTrail, VPC, DNS).
+	•	Enable S3 protection if required.
+
+Step 2 — Multi-account via Organizations (recommended)
+	•	In Security account: designate as GuardDuty delegated admin.
+	•	Invite member accounts (or auto-enable via org-wide settings) and enable detectors in member accounts.
+	•	Ensure cross-account roles/policies allow delegated admin actions.
+
+Step 3 — Configure Threat Intel & Trusted IP lists
+	•	Add threat intel lists (trusted lists to ignore known good IPs and threat lists to block known bad IPs) as needed.
+
+Step 4 — Findings Forwarding & Remediation
+	•	Configure EventBridge rules for GuardDuty Finding events.
+	•	Forward findings to:
+	•	SNS topic (email/slack/pager duty)
+	•	Lambda for automated enrichment or remediation (e.g., isolate instance, revoke keys, apply SG rule)
+	•	Security Hub or SIEM (via Kinesis or partner connector)
+
+Step 5 — Alerts & Playbooks
+	•	Create runbooks for common findings (ec2-instance-recon, crypto-mining, iam-credentials-exfiltration).
+	•	Define severity thresholds for automated vs manual response.
+
+Step 6 — Monitoring & Audit
+	•	Enable CloudTrail logging for GuardDuty API calls.
+	•	Use AWS Config rule to detect accounts without GuardDuty enabled.
+	•	Schedule periodic reviews of findings, false positives, and suppression lists.
+
+Terraform & AWS CLI Snippets
+
+1) Simple GuardDuty detector (Terraform)
+resource "aws_guardduty_detector" "this" {
+  enable = true
+  finding_publishing_frequency = "SIX_HOURS" # or FIFTEEN_MINUTES, ONE_HOUR
+}
+
+2) GuardDuty organization admin (Terraform)
+
+# In security (admin) account
+resource "aws_guardduty_organization_configuration" "org" {
+  auto_enable = true
+}
+
+# designate delegated admin (if using API, do via aws cli or console)
+# Terraform does not directly create the delegated admin; use awscli:
+# aws guardduty create-members --account-details AccountId=123456789012,Email=sec@example.com
+# aws guardduty enable-organization-admin-account --admin-account-id 123456789012
+
+
+3) Enable S3 Protection (Terraform)
+resource "aws_guardduty_detector" "this" {
+  enable = true
+  finding_publishing_frequency = "ONE_HOUR"
+  data_sources {
+    s3_logs {
+      enable = true
+    }
+    flow_logs {
+      enable = true
+    }
+    dns_logs {
+      enable = true
+    }
+  }
+}
+4) Create Member and Invite via AWS CLI (security account)
+
+# create member (list of accounts)
+aws guardduty create-members --detector-id <DETECTOR_ID> \
+  --account-details AccountId=111122223333,Email="member1@example.com"
+
+# invite member
+aws guardduty invite-members --detector-id <DETECTOR_ID> \
+  --account-ids 111122223333
+
+5) Accept Invitation in Member (member account)
+aws guardduty accept-invitation --detector-id <MEM_DETECTOR_ID> --master-id <ADMIN_ACCOUNT_ID> --invitation-id <INVITE_ID>
+
+6) EventBridge rule to forward findings to SNS (Terraform)
+
+resource "aws_cloudwatch_event_rule" "gd_findings" {
+  name = "guardduty-findings"
+  event_pattern = <<EOF
+{
+  "source": ["aws.guardduty"],
+  "detail-type": ["GuardDuty Finding"]
+}
+EOF
+}
+
+resource "aws_sns_topic" "gd_topic" {
+  name = "guardduty-findings-topic"
+}
+
+resource "aws_cloudwatch_event_target" "send_to_sns" {
+  rule = aws_cloudwatch_event_rule.gd_findings.name
+  arn  = aws_sns_topic.gd_topic.arn
+}
+
+resource "aws_lambda_permission" "allow_events" {
+  statement_id  = "AllowExecutionFromEvents"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.remediate.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.gd_findings.arn
+}
+
+RBAC: Sample IAM Policies
+
+GuardDutyReadOnly
+
+{
+  "Version":"2012-10-17",
+  "Statement":[
+    {
+      "Effect":"Allow",
+      "Action":[
+        "guardduty:Get*",
+        "guardduty:List*",
+        "guardduty:Describe*"
+      ],
+      "Resource":"*"
+    }
+  ]
+}
+
+GuardDutyAdmin
+
+Include actions to create detectors, members, configure publishing destinations, threat lists, and manage trusted IP lists:
+
+"guardduty:CreateDetector",
+"guardduty:UpdateDetector",
+"guardduty:CreateMembers",
+"guardduty:InviteMembers",
+"guardduty:CreateIPSet",
+"guardduty:CreateThreatIntelSet",
+...
+
+Apply via AWS SSO permission sets (map to IdP groups: e.g., sec-sre, soc-analyst).
+
+⸻
+
+Validation & Audit Commands
+	•	Check detectors:
+
+aws guardduty list-detectors
+aws guardduty get-detector --detector-id <id>
+
+•	List members (in admin account):
+aws guardduty list-members --detector-id <id>
+
+	•	Check if S3 protection enabled (describe detector -> dataSources.s3Logs) or via Terraform state.
+	•	Search findings:
+
+aws guardduty list-findings --detector-id <id> --finding-criteria '{"Criterion":{"severity":{"Gte":7}}}'
+aws guardduty get-findings --detector-id <id> --finding-ids <json-array-of-ids>
+
+•	AWS Config rule: guardduty-enabled (create custom rule to check across accounts).
+
+⸻
+
+Integrations & SIEM
+	•	Security Hub: import GuardDuty findings into Security Hub for centralized triage.
+	•	SIEM: forward via Kinesis or partner connectors, or via EventBridge → Lambda → SIEM API.
+	•	Ticketing: integrate Lambda to create Jira/ServiceNow tickets for high severity findings.
+	•	SOAR: consider AWS-native or third-party SOAR to orchestrate complex playbooks.
+
+⸻
+
+Monitoring & Reporting
+	•	Dashboards: CloudWatch metrics for finding counts by severity and type.
+	•	Weekly SOC report: number of findings, triaged, remediated, false positives.
+	•	Cost monitoring: GuardDuty costs scale with volume — track trend and tune data sources (e.g., S3 protection increases cost).
+
+⸻
+
+Playbooks (Examples)
+	•	High severity instance compromise: isolate instance, snapshot disk, revoke keys, notify owner/SOC.
+	•	IAM credential exfiltration: disable credentials, rotate keys, audit CloudTrail for lateral movement.
+	•	Crypto-mining detection: restrict egress, isolate, terminate autoscaling group if attacker-launched.
+
+⸻
+
+One-Page Summary (for Slides)
+	•	Enable GuardDuty organization-wide with delegated admin.
+	•	Data sources: CloudTrail, VPC flow logs, DNS logs, S3 (optional).
+	•	Findings → EventBridge → SNS/Lambda/SIEM → SOC.
+	•	RBAC: GuardDutyAdmin, GuardDutyReadOnly, GuardDutyResponder via AWS SSO.
+	•	Automate via Terraform; validate with CLI and AWS Config.
+	•	Build playbooks and integrate with ticketing/SOAR.
+
+
+
+
+
+
