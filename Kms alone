@@ -1,0 +1,94 @@
+HLD – AWS KMS, SSL/TLS, and Encryption
+
+1. Purpose
+
+To ensure all data in AWS is protected at rest and in transit using KMS for key management, SSL/TLS for communication security, and encryption standards across AWS services.
+
+⸻
+
+2. Audience
+	•	Cloud Security Engineers
+	•	DevOps Engineers
+	•	Compliance & Audit Teams
+
+⸻
+
+3. Introduction
+
+This design enforces:
+	•	KMS for centralized management of encryption keys.
+	•	SSL/TLS (via ACM) for secure communication to applications and APIs.
+	•	Encryption Enforcement for AWS services like S3, EBS, RDS, Redshift.
+
+⸻
+
+4. Architecture and Design
+	•	KMS (Encryption at Rest):
+	•	CMKs (Customer Managed Keys) created per service.
+	•	Automatic key rotation enabled.
+	•	Access controlled via IAM key policies.
+	•	SSL/TLS (Encryption in Transit):
+	•	ACM certificates used with ALB, CloudFront, API Gateway.
+	•	Enforce TLS v1.2+ connections only.
+	•	Service-Level Encryption:
+	•	S3: Default bucket encryption with KMS CMK.
+	•	EBS: Encrypted volumes with KMS.
+	•	RDS/Redshift: Encrypted instances + SSL enforced for connections.
+	•	DynamoDB: Server-side encryption enabled by default.
+
+(Diagram suggestion: KMS → Services (S3, RDS, EBS, Redshift) for encryption at rest; ACM/SSL → Load Balancer/API for encryption in transit.)
+
+⸻
+
+5. List of Components & Services
+	•	AWS KMS
+	•	AWS ACM
+	•	Amazon S3, EBS, RDS, Redshift, DynamoDB
+
+⸻
+
+6. Screenshots
+	•	KMS CMK configuration screen.
+	•	ACM certificate dashboard.
+	•	Encrypted S3 bucket / RDS instance.
+
+⸻
+
+7. Observability (Backup & Restore)
+	•	KMS: Keys automatically backed and durable.
+	•	ACM: Certificates auto-renew.
+	•	CloudTrail + Config: Monitors if encryption disabled.
+
+⸻
+
+8. Common Services
+	•	Integrated with Audit Account monitoring.
+	•	Linked with Security Hub for compliance validation.
+	•	Alerts via EventBridge if unencrypted resource created.
+
+⸻
+
+🛠 Implementation Steps
+
+A. KMS Setup
+	1.	Create CMK for each major service.
+	2.	Enable automatic rotation.
+	3.	Restrict access to key policies.
+resource "aws_kms_key" "s3_key" {
+  description         = "KMS key for S3 encryption"
+  enable_key_rotation = true
+}
+
+B. SSL/TLS Setup
+	1.	Request certificate in ACM:
+
+aws acm request-certificate --domain-name example.com --validation-method DNS
+
+2.	Attach ACM certificate to ALB/CloudFront.
+	3.	Enforce HTTPS/TLS 1.2+.
+
+C. Encryption Enforcement
+	•	S3: Block public access + default KMS encryption.
+	•	EBS: Encrypted-by-default enabled at account level.
+	•	RDS/Redshift: Enable storage encryption + enforce SSL parameter group.
+	•	DynamoDB: Default encryption with AWS-owned KMS key.
