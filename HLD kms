@@ -1,0 +1,62 @@
+HLD – Security Controls (SCP, Guardrails, KMS, SSL, Encryption)
+
+1. Purpose
+
+To enforce organization-wide security and compliance across AWS accounts using Service Control Policies (SCPs), preventive guardrails, encryption standards with KMS, and secure communication via SSL/TLS.
+
+2. Audience
+	•	Security Architects
+	•	DevOps / Cloud Engineers
+	•	Compliance Team
+
+3. Introduction
+
+This HLD defines the design and implementation strategy for:
+	•	SCPs & Guardrails → Preventive policies at OU/account level.
+	•	KMS → Centralized key management for encryption at rest.
+	•	SSL/TLS → Encryption in transit using ACM certificates.
+	•	Encryption Enforcement → Mandatory across S3, EBS, RDS, Redshift, etc.
+
+4. Architecture and Design
+	•	SCPs & Guardrails
+	•	Deny actions outside approved regions.
+	•	Enforce s3:PutObject with x-amz-server-side-encryption.
+	•	Block disabling of CloudTrail, Config, GuardDuty.
+	•	KMS
+	•	Customer-managed keys for S3, RDS, Redshift, EBS, Secrets Manager.
+	•	Key rotation enabled, policies managed via Terraform/IaC.
+	•	SSL/TLS
+	•	ACM-issued certificates for all endpoints (ALB, API Gateway, CloudFront).
+	•	Enforce TLS 1.2 or above.
+	•	Encryption
+	•	At-rest: S3, EBS, RDS, Redshift, DynamoDB → all use KMS CMKs.
+	•	In-transit: ALB/ELB HTTPS listeners, RDS SSL connections, Redshift SSL.
+
+(Add diagram: SCPs at Org → KMS/SSL applied across accounts → enforced guardrails)
+
+5. List of Components & Services
+	•	AWS Organizations (SCPs)
+	•	Control Tower Guardrails
+	•	AWS KMS
+	•	AWS ACM (SSL)
+	•	CloudTrail, Config (to validate compliance)
+
+6. Screenshots
+	•	Example SCP JSON in console
+	•	KMS CMK policy screen
+	•	ACM certificate details
+	•	Encrypted S3 bucket property
+
+7. Observability (Backup & Restore)
+	•	CloudTrail logs for SCP policy changes.
+	•	Backup of SCP definitions in GitHub/Azure DevOps repo.
+	•	KMS key rotation + recovery supported by AWS.
+	•	ACM auto-renewal for certificates.
+
+8. Common Services
+	•	Integrated with GuardDuty and Security Hub for continuous compliance.
+	•	Linked to centralized Audit Account for monitoring.
+
+⸻
+
+🛠 Implementation Steps
