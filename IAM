@@ -101,7 +101,37 @@ Add to Section 2. Purpose / 3. Scope
 	•	Any new user creation or attribute updates (e.g., email, group assignment) must be done in the IdP.
 	•	AWS IAM roles & permission sets are mapped to groups from the IdP.
 
-⸻
+[Azure AD / Entra ID]
+        │
+        ▼
+     [AWS SSO]
+        │
+        ▼
+       [IAM]
+ ┌───────────────┬───────────────┬───────────────┐
+ │               │               │               │
+▼               ▼               ▼               ▼
+Users         Groups          Roles          Policies
+(Service)   (Dev, Audit,    (Service,       (Least-
+            Admin)          Cross,          Privilege)
+                            Federated)
+
+        │
+        ▼
+ [AWS Services]
+ (S3, RDS, EC2,
+  Redshift, DDB)
+
+        │
+        ▼
+     [Audit]
+ (CloudTrail, Config,
+  GuardDuty, SecHub)
+
+
+
+
+
 
 📌 Add to Section 6. Recommended Logical Model
 	•	Human Access
