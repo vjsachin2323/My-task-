@@ -73,3 +73,13 @@ To establish a comprehensive monitoring and compliance framework using Amazon Cl
 	•	EventBridge – Responds to Config non-compliance with remediation.
 	•	Security Hub – Aggregates compliance results from Config.
 	•	SNS / Lambda – Notifications or automated remediation.
+
+
+Integration Steps (CloudWatch + Config Together)
+	1.	Enable CloudTrail integration → all IAM, KMS, and Config API calls logged.
+	2.	Link CloudWatch Events with Config findings → automated response.
+	3.	Configure SNS topic for compliance & monitoring alerts.
+	4.	Test recovery:
+	•	Export CloudWatch dashboards as JSON → store in Git repo.
+	•	Verify Config snapshot delivery to S3 (encrypted).
+	•	Restore resources from Config snapshots if drift detected.
