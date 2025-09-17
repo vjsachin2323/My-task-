@@ -1,0 +1,93 @@
+HLD – AWS IAM Users, Groups, Roles, and Permissions
+
+1. Purpose
+
+To provide a secure and scalable Identity and Access Management (IAM) model in AWS that ensures least-privilege access, role-based controls, and integration with the external IdP (Azure AD / Entra ID).
+
+⸻
+
+2. Audience
+	•	Cloud Security Team
+	•	DevOps Engineers
+	•	Application Owners
+	•	Compliance & Audit Teams
+
+⸻
+
+3. Introduction
+
+AWS IAM enables centralized identity and access management for AWS resources. This design ensures:
+	•	External IdP (Azure AD / Entra ID) is the primary identity source.
+	•	AWS IAM is used for roles, groups, and service permissions only.
+	•	All users authenticate via SSO, not directly via IAM users.
+	•	IAM users are restricted to service accounts (automation, break-glass accounts).
+
+⸻
+
+4. Architecture & Design
+	•	Identity Source: External IdP (Azure AD → AWS SSO → IAM Identity Center).
+	•	IAM Users: Only created when strictly needed (break-glass or service accounts). MFA mandatory.
+	•	IAM Groups: Logical grouping of permissions, e.g.:
+	•	Developers → Read/Write on Dev accounts
+	•	Auditors → Read-only on all accounts
+	•	Admins → Full admin only in non-prod
+	•	IAM Roles:
+	•	Cross-account roles: Allow DevOps pipelines, applications, and monitoring tools to access resources securely.
+	•	Service roles: E.g., EC2 → S3 access role, Lambda → DynamoDB role.
+	•	Federated roles: Mapped from Azure AD groups → IAM roles for RBAC.
+	•	IAM Policies (Permissions):
+	•	Scoped and least privilege (s3:PutObject on one bucket, not *).
+	•	Managed via Terraform.
+	•	Inline policies avoided (only used for exceptions).
+	•	Logging & Monitoring:
+	•	IAM changes logged via CloudTrail.
+	•	Config rules to check MFA, key rotation, unused users/roles.
+
+⸻
+
+5. Implementation Steps
+	1.	Integrate IdP
+	•	Connect Azure AD / Entra ID to AWS SSO (IAM Identity Center).
+	•	Map AD groups → AWS SSO groups → IAM roles.
+	2.	Create IAM Groups & Roles
+	•	Developers, Auditors, Admins groups.
+	•	Service-specific roles (e.g., RedshiftReadRole, S3IngestRole).
+	3.	Define IAM Policies
+	•	Create JSON policies with least-privilege. Example:
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject"],
+      "Resource": "arn:aws:s3:::my-app-bucket/*"
+    }
+  ]
+}
+
+4.	Attach Groups → Roles → Users
+	•	Azure AD groups automatically map to IAM roles.
+	•	Only automation users (CI/CD, monitoring) are IAM users.
+	5.	Enforce Security Controls
+	•	Enable MFA for all IAM users.
+	•	Rotate access keys every 90 days.
+	•	Block public policies with IAM Access Analyzer.
+
+⸻
+
+6. Diagram (Conceptual)
+
+The diagram would show:
+	•	Azure AD / Entra ID → AWS SSO → IAM Roles.
+	•	Groups: Developers, Auditors, Admins.
+	•	Service Roles: Lambda, EC2, Redshift.
+	•	Policies attached to Groups & Roles.
+	•	IAM Users only for service accounts.
+
+⸻
+
+7. Best Practices
+	•	Use roles instead of long-term IAM users.
+	•	Enforce least privilege and regularly review policies.
+	•	Enable IAM Access Analyzer for policy validation.
+	•	Rotate keys, enable MFA, disable unused accounts.
