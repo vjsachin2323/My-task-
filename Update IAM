@@ -1,0 +1,72 @@
+📄 HLD – AWS IAM Users, Groups, Roles, and Permissions
+
+1. Purpose
+
+To design a secure and scalable IAM model that provides least-privilege access, enforces RBAC, and integrates AWS accounts with the enterprise Identity Provider (Azure AD / Entra ID).
+
+⸻
+
+2. Audience
+	•	Cloud Security Engineers
+	•	DevOps Engineers
+	•	Application Owners
+	•	Compliance & Audit Team
+
+⸻
+
+3. Introduction
+
+AWS IAM will be used for roles, groups, and permissions, while all user identities come from Azure AD through AWS SSO / IAM Identity Center. IAM users will only exist for service accounts and emergency access.
+
+⸻
+
+4. Architecture & Design
+	•	Identity Source: Azure AD (federated to AWS SSO).
+	•	IAM Users: Limited to service accounts; MFA enforced.
+	•	IAM Groups: Developers, Auditors, Admins.
+	•	IAM Roles: Service roles (EC2 → S3, Lambda → DynamoDB), Cross-account roles, Federated roles mapped from Azure AD groups.
+	•	Policies: JSON-based least-privilege, managed via Terraform.
+	•	Monitoring: CloudTrail + AWS Config track all IAM changes.
+
+⸻
+
+5. List of Components & Services
+	•	Azure AD / Entra ID – Enterprise identity provider.
+	•	AWS IAM Identity Center (SSO) – Federation + role mapping.
+	•	IAM Users – Only service accounts (CI/CD, automation).
+	•	IAM Groups – Logical groupings for RBAC.
+	•	IAM Roles – Cross-account, service-specific, and federated roles.
+	•	IAM Policies – Managed policies stored in Terraform.
+	•	CloudTrail + Config – Logging & compliance monitoring.
+	•	KMS – To encrypt IAM user credentials (if stored in Secrets Manager).
+
+⸻
+
+6. Screenshots (to include in doc)
+	•	AWS IAM Console: Roles, Groups, and Policies view.
+	•	AWS SSO configuration with Azure AD mapping.
+	•	Example IAM Policy JSON snippet in AWS Console.
+	•	CloudTrail event showing IAM activity.
+
+⸻
+
+7. Observability (Backup & Restore)
+	•	IAM Config Backup: Terraform as source of truth for all IAM entities (roles, policies, groups).
+	•	CloudTrail Logs: Centralized in the Log account, encrypted with KMS.
+	•	Backup Strategy:
+	•	Daily export of IAM roles & policies (Terraform state + AWS Config snapshots).
+	•	Secrets Manager stores IAM user access keys (encrypted).
+	•	Restore Strategy:
+	•	Recreate IAM roles/policies from Terraform repo.
+	•	Restore user/service credentials from Secrets Manager.
+	•	Validate restored entities using AWS Config compliance reports.
+
+⸻
+
+8. Common Services
+	•	AWS Config – Continuous compliance check (MFA enabled, key rotation enforced).
+	•	CloudTrail – Track IAM API calls and role assumption.
+	•	GuardDuty – Detect suspicious IAM activity.
+	•	Security Hub – Centralized compliance findings.
+	•	Access Analyzer – Detects overly permissive IAM policies.
+	•	Secrets Manager – Stores service account credentials.
