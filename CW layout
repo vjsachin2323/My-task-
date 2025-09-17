@@ -1,0 +1,22 @@
+          [AWS Resources]
+   (EC2, RDS, S3, Redshift, IAM, etc.)
+                 │
+   ┌─────────────┴─────────────┐
+   │                           │
+   ▼                           ▼
+[CloudWatch]              [AWS Config]
+ Metrics / Logs /         Config Recorder /
+ Alarms / Dashboards      Config Rules / Snapshots
+   │                           │
+   │                           │
+   ▼                           ▼
+[EventBridge]             [S3 (Snapshots, KMS)]
+   │                           │
+   └──────────────┬────────────┘
+                  ▼
+          [Security Hub]
+     (Central Compliance & Alerts)
+                  │
+                  ▼
+            [Notifications]
+      (SNS, Email, Slack, Lambda)
