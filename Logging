@@ -1,0 +1,128 @@
+HLD – Logging Strategy (AWS Centralized Logging)
+
+1. Purpose
+
+To implement a centralized, secure, and scalable logging strategy in AWS that captures logs from all services and applications, ensures compliance, supports incident response, and provides long-term retention for audit purposes.
+
+⸻
+
+2. Audience
+	•	Cloud Security Team
+	•	DevOps / Platform Team
+	•	Application Owners
+	•	Compliance & Audit Team
+
+⸻
+
+3. Introduction
+
+Logging strategy ensures that:
+	•	All AWS accounts and services (EC2, RDS, S3, Redshift, IAM, CloudTrail, etc.) produce logs.
+	•	Logs are aggregated centrally in the Log/Audit account.
+	•	Logs are encrypted, immutable, and retained per compliance requirements.
+	•	Monitoring, alerting, and analysis are enabled through CloudWatch, Config, Security Hub, and SIEM tools.
+
+⸻
+
+4. Architecture & Design
+	1.	Log Sources
+	•	AWS Service Logs: CloudTrail, VPC Flow Logs, ALB/ELB logs, RDS/Aurora logs, S3 access logs.
+	•	Application Logs: Custom app logs via CloudWatch Agent.
+	•	OS/Infrastructure Logs: EC2 system logs, OS metrics.
+	2.	Log Ingestion
+	•	CloudWatch Logs (Log Groups) for streaming + short-term retention.
+	•	Kinesis Firehose (optional) for near real-time delivery.
+	3.	Log Storage
+	•	Centralized S3 bucket in Log account (with strict bucket policies).
+	•	S3 Object Lock + Versioning enabled for immutability.
+	•	Encrypted with KMS CMKs.
+	4.	Log Monitoring & Analysis
+	•	CloudWatch Metrics & Alarms for anomalies.
+	•	Athena queries on S3 for ad-hoc analysis.
+	•	Integration with Security Hub & GuardDuty.
+	•	Optional integration with external SIEM (Splunk, ELK).
+	5.	Log Retention
+	•	Hot storage (CloudWatch/S3 Standard) → 90 days.
+	•	Warm storage (S3 IA) → 1 year.
+	•	Cold storage (S3 Glacier) → 7 years (for compliance).
+
+⸻
+
+5. List of Components & Services
+	•	CloudTrail – API activity logs.
+	•	VPC Flow Logs – Network traffic logs.
+	•	CloudWatch Logs – Application/system logs.
+	•	S3 – Central storage with Object Lock & versioning.
+	•	KMS – Encrypts logs at rest.
+	•	Athena / Glue Data Catalog – Log analysis.
+	•	Security Hub, GuardDuty – Threat detection.
+	•	EventBridge, SNS – Alerts and notifications.
+	•	SIEM Integration – (Optional) Splunk/ELK for advanced correlation.
+
+⸻
+
+6. Screenshots (to include in doc)
+	•	CloudTrail setup screen (Org Trail enabled).
+	•	CloudWatch Logs group.
+	•	Central S3 logging bucket with encryption.
+	•	Athena query console with log analysis.
+
+⸻
+
+7. Observability (Backup & Restore)
+	•	CloudTrail/Config snapshots → delivered to central S3 bucket.
+	•	CloudWatch Logs → exported to S3 daily.
+	•	Backup → Lifecycle rules move logs to Glacier.
+	•	Restore → Retrieve logs from Glacier or replay CloudTrail logs for investigation.
+
+⸻
+
+8. Common Services
+	•	CloudTrail – Ensures governance/audit logging.
+	•	Config – Validates log configurations are enabled.
+	•	GuardDuty – Detects anomalies in logs.
+	•	Security Hub – Aggregates findings.
+	•	KMS – Secures logs at rest.
+	•	CloudWatch – Monitoring & dashboards.
+
+⸻
+
+9. Implementation Steps
+
+Step 1: Enable Organization-wide CloudTrail
+
+aws cloudtrail create-trail --name OrgTrail \
+  --s3-bucket-name central-log-bucket \
+  --is-multi-region-trail
+Step 2: Configure Central S3 Log Bucket
+	•	Enable versioning + Object Lock.
+	•	Block public access.
+	•	Apply KMS encryption.
+
+Step 3: Enable VPC Flow Logs
+
+aws ec2 create-flow-logs --resource-type VPC \
+ --resource-ids vpc-12345 \
+ --traffic-type ALL \
+ --log-destination arn:aws:logs:region:account:log-group/vpc-flow-logs
+
+Step 4: Stream Application Logs to CloudWatch
+	•	Install CloudWatch Agent on EC2.
+	•	Configure log groups with retention (30–90 days).
+
+Step 5: Export Logs to S3
+	•	Create export tasks or set up Kinesis Firehose → S3.
+
+Step 6: Set up Athena & Glue Catalog
+	•	Create Glue tables for log schema.
+	•	Use Athena queries for searching logs.
+
+Step 7: Configure Compliance Validation
+	•	Use AWS Config rules:
+	•	Ensure CloudTrail is enabled.
+	•	Ensure S3 logging is enabled.
+	•	Ensure log bucket is encrypted with KMS.
+
+Step 8: Set up Alerts
+	•	CloudWatch Alarms on error counts, unusual API calls.
+	•	EventBridge rules → SNS / Lambda for real-time alerting.
