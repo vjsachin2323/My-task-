@@ -1,0 +1,75 @@
+HLD – AWS CloudWatch & AWS Config
+
+1. Purpose
+
+To establish a comprehensive monitoring and compliance framework using Amazon CloudWatch for observability (metrics, logs, alarms) and AWS Config for continuous compliance (resource configuration tracking and audit).
+
+⸻
+
+2. Audience
+	•	Cloud/DevOps Engineers
+	•	Security & Compliance Teams
+	•	Application Owners
+
+⸻
+
+3. Introduction
+	•	Amazon CloudWatch provides visibility into application and infrastructure health, enabling alerting, automation, and cost/performance optimization.
+	•	AWS Config continuously records and evaluates the configuration of AWS resources to ensure compliance with organizational policies and industry standards.
+
+⸻
+
+4. Architecture & Design
+	•	CloudWatch
+	•	Metrics: Collects performance & health metrics (EC2, RDS, Lambda, Redshift, etc.).
+	•	Logs: Applications and AWS services push logs to CloudWatch Logs.
+	•	Alarms: Real-time thresholds trigger alerts (e.g., high CPU, failed API calls).
+	•	Dashboards: Custom dashboards for monitoring KPIs.
+	•	Events: Integrates with EventBridge for automation (SNS → Slack/Email, Lambda remediation).
+	•	AWS Config
+	•	Records resource configuration changes (S3 buckets, IAM, Security Groups, KMS, etc.).
+	•	Evaluates compliance using managed & custom Config rules.
+	•	Delivers compliance snapshots to S3, findings to Security Hub.
+	•	Supports remediation via SSM documents or Lambda automation.
+	•	Integrated with CloudWatch Alarms & EventBridge for proactive responses.
+
+⸻
+
+5. List of Components & Services
+	•	CloudWatch Metrics – CPU, memory, network, DB queries.
+	•	CloudWatch Logs – Application/system logs.
+	•	CloudWatch Alarms – Event-driven alerts.
+	•	CloudWatch Dashboards – Visual health monitoring.
+	•	CloudWatch Events/EventBridge – Remediation triggers.
+	•	AWS Config Recorder – Tracks configuration changes.
+	•	AWS Config Rules – Compliance validation.
+	•	AWS Config Aggregator – Multi-account compliance view.
+	•	S3 + KMS – Secure storage of Config snapshots/logs.
+	•	Security Hub / GuardDuty – Centralized security findings.
+
+⸻
+
+6. Screenshots (to capture)
+	•	CloudWatch dashboard with metrics.
+	•	CloudWatch alarm creation screen.
+	•	AWS Config compliance dashboard.
+	•	Example Config rule (e.g., S3 encryption enabled).
+
+⸻
+
+7. Observability (Backup & Restore)
+	•	CloudWatch Logs: Export to S3 (KMS encrypted), lifecycle → Glacier.
+	•	CloudWatch Dashboards: Export/import as JSON templates.
+	•	AWS Config: Snapshots delivered to central S3 bucket (encrypted).
+	•	Restore:
+	•	Re-import dashboards into CloudWatch.
+	•	Replay Config snapshots from S3 to audit past resource states.
+
+⸻
+
+8. Common Services
+	•	CloudTrail – Logs CloudWatch & Config API activity.
+	•	KMS – Encrypts Config snapshots and logs.
+	•	EventBridge – Responds to Config non-compliance with remediation.
+	•	Security Hub – Aggregates compliance results from Config.
+	•	SNS / Lambda – Notifications or automated remediation.
